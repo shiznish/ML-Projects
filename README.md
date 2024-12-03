@@ -1,4 +1,4 @@
-Project - ML Model Development Based on Brazil’s COVID-19 Dataset
+# Project - ML Model Development Based on Brazil’s COVID-19 Dataset
 Description
 Brazil is among the nations most impacted by the COVID-19 pandemic, with over 16 million confirmed cases and 454,429 confirmed fatalities by May 26, 2021 (according to the Johns Hopkins Coronavirus Resource Center).
 
