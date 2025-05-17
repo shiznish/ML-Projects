@@ -36,7 +36,9 @@ if st.button("Ask Agent!"):
             "messages": [user_query],
             "allow_search": allow_web_search
         }
-
+        print("Payload:", payload)
+        print ("API URL:", API_URL)
+        print("hi")
         response=requests.post(API_URL, json=payload)
         if response.status_code == 200:
             response_data = response.json()

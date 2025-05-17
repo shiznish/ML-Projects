@@ -101,5 +101,5 @@ This project is licensed under the MIT License.
 
 ---
 
-**Author:** x  
+**Author:** Aneesha MP 
 **GitHub:** [https://github.com/x/End-to-end-ML-Project-Implementation](https://github.com/x/End-to-end-ML-Project-Implementation)
