@@ -1,0 +1,11 @@
+python-dotenv
+langchain
+langchain-community
+langchain-chroma
+langchain-huggingface
+sentence-transformers
+smolagents
+gradio
+chromadb
+# PDF parsing dependencies
+pypdf
