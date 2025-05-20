@@ -1,13 +1,15 @@
-# Crawl4AISample: ChromaDB RAG AI Agent with Groq LLM
+# Crawl4AISample: URL Scraping Knowledgebase with ChromaDB, Groq LLM, and Pydantic AI
 
-This project demonstrates a Retrieval-Augmented Generation (RAG) agent that uses ChromaDB for document retrieval and Groq LLMs for answer generation. The agent logic is built using **Pydantic AI**, which provides a structured and type-safe approach to agent orchestration. The project features a Streamlit web interface for interactive Q&A over your indexed documentation.
+This project demonstrates how to **scrape any URL to build a knowledge base**, then use Retrieval-Augmented Generation (RAG) with ChromaDB for document retrieval and Groq LLMs for answer generation. The agent logic is orchestrated using **Pydantic AI**. An interactive Streamlit web app allows you to chat with your custom knowledge base.
 
 ## Features
 
-- Combines vector search (ChromaDB) with LLM-based answer generation (Groq)
-- Agent logic and orchestration powered by **Pydantic AI**
-- Interactive Streamlit web app for chat-based Q&A
-- Easy document ingestion and indexing
+- **URL Scraping:** Crawl and extract content from any URL to populate your knowledge base.
+- **Vector Search:** Store and retrieve knowledge using ChromaDB.
+- **LLM-Powered Answers:** Use Groq LLMs for generating responses based on retrieved context.
+- **Agent Orchestration:** Built with Pydantic AI for structured, type-safe logic.
+- **Interactive UI:** Chat with your knowledge base using Streamlit.
+- **Easy Document Ingestion:** Add new knowledge with a simple script.
 
 ## Setup
 
@@ -21,6 +23,7 @@ This project demonstrates a Retrieval-Augmented Generation (RAG) agent that uses
    ```bash
    python -m venv .venv
    .venv\Scripts\activate 
+   ```
 
 3. **Install dependencies:**
    ```bash
@@ -32,9 +35,9 @@ This project demonstrates a Retrieval-Augmented Generation (RAG) agent that uses
    GROQ_API_KEY=your_groq_api_key_here
    ```
 
-5. **Ingest documents (if needed):**
+5. **Ingest documents by scraping URLs:**
    ```bash
-   python insert_docs.py --collection docs --db-dir ./chroma_db --embedding-model all-MiniLM-L6-v2
+   python insert_docs.py --url <your-url> --collection docs --db-dir ./chroma_db --embedding-model all-MiniLM-L6-v2
    ```
 
 6. **Run the Streamlit app:**
@@ -45,6 +48,4 @@ This project demonstrates a Retrieval-Augmented Generation (RAG) agent that uses
 ## Usage
 
 - Open [http://localhost:8501](http://localhost:8501) in your browser.
-- Ask questions about your indexed documents in the chat interface.
-
----
+- Ask questions about your scraped and indexed knowledge base in the chat interface.
