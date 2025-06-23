@@ -1,63 +1,89 @@
-# Machine Learning & GenAI Portfolio
+# Azure DevOps AI PR Reviewer
 
-Welcome to my **Machine Learning Projects Repository**, a curated collection of diverse and impactful projects that showcase my expertise in applying advanced machine learning techniques to solve real-world problems. These projects span various domains such as customer analytics, sentiment analysis, network security, time series forecasting, machine learning, deep learning, natural language processing, and AI application development and more. Each project is thoughtfully documented, providing insights into the methodology, tools, and outcomes.
+## Overview
 
----
-
-## 📂 Project List
-
-### 1. **End_To_End_ML_Project**
-A complete ML pipeline for wine quality prediction, including data ingestion, validation, transformation, model training, evaluation, and a Flask web app for predictions.
-
-### 2. **Agentic-Chatbot-FastAPI**
-A production-ready, agentic AI chatbot using FastAPI and LangGraph, supporting multiple LLM providers and a Streamlit frontend for interactive conversations.
-
-### 3. **Gen AI_Cold Email**
-A generative AI project for automating cold email creation, featuring vector search and prompt engineering.
-
-### 4. **Local AI Agent(RAG)**
-A retrieval-augmented generation (RAG) agent that answers domain-specific questions (e.g., about a pizza restaurant) using local vector stores and LLMs.
-
-### 5. **Brazils_COVID19_Prediction**
-A machine learning project to predict ICU admission needs for COVID-19 patients in Brazil using clinical and demographic data.
-
-### 6. **COVID19_Forecast**
-A project for forecasting COVID-19 trends using various time series and ML techniques.
-
-### 7. **Customer_Churn**
-A machine learning solution for predicting customer churn, including feature engineering, model selection, and explainability.
-
-### 8. **Explainable_Intrusion_Detection**
-An explainable AI project for network intrusion detection, combining ML models with interpretability techniques.
-
-### 9. **Sentiment_Analysis_Malayalam**
-A sentiment analysis project for Malayalam language texts, leveraging NLP and deep learning.
-
-### 10. **TimeSeries_Analysis**
-A collection of time series analysis and forecasting projects, demonstrating classical and modern approaches.
-
+**Azure DevOps AI PR Reviewer** is an automated code review tool designed to enhance your pull request (PR) process. It analyzes code changes in every PR, summarizes the key modifications, and provides actionable, AI-powered review comments. This tool integrates seamlessly with Azure DevOps pipelines and leverages Groq LLMs for fast, high-quality code analysis. You can easily adapt it to use other AI providers or local models if needed.
 
 ---
 
-## 🛠️ How to Explore
+## Key Benefits
 
-- Each project folder contains its own `README.md` with setup instructions, usage, and sample results.
-- Most projects include requirements files for easy environment setup.
-- Web-based projects provide screenshots and demo instructions.
-
----
-
-## 📸 Example Screenshots
-
-You’ll find screenshots in the respective project folders to showcase web UIs and results.
+- **Automated Code Review:** Instantly reviews every PR, saving valuable developer time.
+- **Consistent Feedback:** Ensures every PR is checked against coding standards and best practices.
+- **AI-Powered Insights:** Uses Groq LLMs for deep code understanding and concise summaries.
+- **Customizable:** Easily switch to other AI providers or local models.
+- **Seamless Integration:** Designed for Azure DevOps pipelines; triggers automatically on every PR.
 
 ---
 
-## 🚀 About Me
+## How It Works
 
-I am passionate about building robust, scalable, and user-friendly AI solutions.  
-This portfolio demonstrates my ability to deliver real-world ML and GenAI applications from data engineering to deployment.
+1. **Trigger:** The script is added as a step in your Azure DevOps pipeline and is triggered for every new PR in the repository.
+2. **Fetch Changes:** It fetches the changed files and diffs for the PR using Azure DevOps REST APIs.
+3. **AI Review:** The code diffs are sent to Groq LLM (or your configured AI model) for analysis and summarization.
+4. **Post Comments:** The script posts a high-level summary and file-specific review comments directly to the PR in Azure DevOps.
+5. **Coding Standards:** Optionally, it checks changes against your coding standards (see `docs/coding-standards.md`).
 
 ---
 
-**Feel free to explore each project folder for more details, code, and documentation!**
+## Usage
+
+### 1. Prerequisites
+
+- Python 3.8+
+- Azure DevOps repository and pipeline
+- Groq API key (or other AI provider key)
+- Required environment variables set in `.env` (see below)
+
+### 2. Environment Setup
+
+Create a `.env` file in your project root with the following variables:
+
+```
+AZURE_ORG=your_azure_org
+AZURE_PROJECT=your_project
+AZURE_REPO_ID=your_repo_id
+PR_ID=$(System.PullRequest.PullRequestId)  # Use Azure DevOps pipeline variable
+SYSTEM_ACCESSTOKEN=$(System.AccessToken)   # Use Azure DevOps pipeline variable
+GROQ_API_KEY=your_groq_api_key
+OLLAMA_MODEL=mistral-saba-24b
+OLLAMA_URL=https://api.groq.com/openai/v1/chat/completions
+CODING_STANDARDS_PATH=docs/coding-standards.md
+```
+
+### 3. Pipeline Integration
+
+Add a step to your Azure DevOps pipeline YAML:
+
+```yaml
+- script: |
+    python -m pip install -r requirements.txt
+    python pr_review.py
+  displayName: 'Run AI PR Review'
+  env:
+    SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+    PR_ID: $(System.PullRequest.PullRequestId)
+```
+
+### 4. Customization
+
+- **Switch AI Provider:** Change the API endpoint and model in your `.env` or code to use another LLM or local model.
+- **Coding Standards:** Edit `docs/coding-standards.md` to enforce your team's best practices.
+
+---
+
+## Example Output
+
+Below is a sample screenshot of the PR review summary posted by the bot:
+
+![PR Review Output](screenshots/pr_review_output.png)
+
+---
+
+## License
+
+This project is for internal and demonstration purposes.
+
+---
+
+**Author:** [Your Name]
