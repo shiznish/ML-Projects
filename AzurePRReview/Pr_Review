@@ -1,0 +1,360 @@
+import os
+import logging
+import requests
+import difflib
+import re
+from dotenv import load_dotenv
+from urllib.parse import quote
+import base64
+
+# Load environment variables
+load_dotenv()
+dry_run = True
+
+# Logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
+# Configs
+AZURE_ORG = os.getenv("AZURE_ORG")
+PROJECT = os.getenv("AZURE_PROJECT")
+REPO_ID = os.getenv("AZURE_REPO_ID")
+PR_ID = os.getenv("PR_ID")
+AZURE_TOKEN = os.getenv("SYSTEM_ACCESSTOKEN")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+MODEL = os.getenv("OLLAMA_MODEL", "llama3-8b-8192")
+GROQ_URL = os.getenv("OLLAMA_URL", "https://api.groq.com/openai/v1/chat/completions")
+CODING_STANDARDS_PATH = os.getenv("CODING_STANDARDS_PATH")
+MAX_FILES = 5
+
+def api_headers():
+    return {
+        "Authorization": f"Bearer {AZURE_TOKEN}",
+        "Content-Type": "application/json"
+    }
+
+def get_latest_iteration_id():
+    url = f"https://dev.azure.com/{AZURE_ORG}/{PROJECT}/_apis/git/repositories/{REPO_ID}/pullRequests/{PR_ID}/iterations?api-version=7.1-preview.1"
+    resp = requests.get(url, headers=api_headers())
+    resp.raise_for_status()
+    return resp.json()["value"][-1]["id"]
+
+def get_pr_changes(iteration_id):
+    url = f"https://dev.azure.com/{AZURE_ORG}/{PROJECT}/_apis/git/repositories/{REPO_ID}/pullRequests/{PR_ID}/iterations/{iteration_id}/changes?api-version=7.1-preview.1"
+    resp = requests.get(url, headers=api_headers())
+    resp.raise_for_status()
+    return (resp.json().get("changeEntries") or [])[:MAX_FILES]
+
+def get_blob_content(repo_id, blob_id):
+    url = f"https://dev.azure.com/{AZURE_ORG}/{PROJECT}/_apis/git/repositories/{repo_id}/blobs/{blob_id}?api-version=7.1-preview.1"
+    headers = {
+        "Authorization": f"Bearer {AZURE_TOKEN}",
+        "Accept": "application/octet-stream"
+    }
+    response = requests.get(url, headers=headers)
+    if not response.ok:
+        response.raise_for_status()
+    try:
+        return response.content.decode("utf-8", errors="replace")
+    except Exception as e:
+        logging.warning(f"Failed to decode blob content for {blob_id}: {e}")
+        return ""
+
+def normalize_line(line):
+    return ' '.join(line.strip().split())
+
+def generate_file_diff(original_content: str, modified_content: str) -> str:
+    """
+    Generate unified diff between two files, ignoring indentation and extra spaces
+    """
+    try:
+        original_lines = original_content.splitlines()
+        modified_lines = modified_content.splitlines()
+
+        # Normalize lines (ignore indentation and redundant spaces)
+        normalized_original = [normalize_line(l) for l in original_lines]
+        normalized_modified = [normalize_line(l) for l in modified_lines]
+
+        matcher = difflib.SequenceMatcher(None, normalized_original, normalized_modified)
+        diff_lines = []
+
+        for opcode, i1, i2, j1, j2 in matcher.get_opcodes():
+            if opcode == 'equal':
+                continue  
+            if opcode in ('replace', 'delete'):
+                for line in original_lines[i1:i2]:
+                    diff_lines.append(f"- {line.rstrip()}")
+            if opcode in ('replace', 'insert'):
+                for line in modified_lines[j1:j2]:
+                    diff_lines.append(f"+ {line.rstrip()}")
+
+        return '\n'.join(diff_lines) or "No meaningful changes found."
+
+    except Exception as e:
+        return f"Error generating diff: {e}"
+
+
+def create_analysis_prompt( diff_content: str) -> str:
+    """
+    Returns a prompt for AI to summarize PR changes.
+    :param diff: Unified diff string
+    :return: Full AI prompt for summarizing PR changes
+    """
+    prompt = f"""You are an AI reviewer helping summarize Pull Requests for comments.
+
+Given the following unified diff, generate a clear and concise summary of the key code changes.
+
+Instructions:
+- Do NOT explain what a diff is.
+- Focus ONLY on meaningful behavior, logic, or structure changes.
+- Ignore whitespace, formatting, or minor naming changes.
+- Use a neutral, technical tone – no opinions.
+- Group related changes together logically.
+- Output should be short and skimmable.
+
+Format:
+
+### Summary of Changes
+- <Short and specific change #1>
+- <Short and specific change #2>
+- <Short and specific change #3>
+[Add more only if significant, maximum 6 lines total]
+
+Diff:
+{diff_content}"""
+    return prompt
+
+def minimal_diff_lines(old_text, new_text):
+    old_lines = old_text.splitlines()
+    new_lines = new_text.splitlines()
+    diff = list(difflib.unified_diff(old_lines, new_lines, lineterm='', n=3))
+    
+    changed_lines = []
+    new_line_num = 0
+    
+    for line in diff:
+        if line.startswith('@@'):
+            # Parse hunk header: @@ -oldStart,oldCount +newStart,newCount @@
+            m = re.match(r'@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@', line)
+            if m:
+                new_line_num = int(m.group(1)) - 1
+        elif line.startswith('+') and not line.startswith('+++'):
+            new_line_num += 1
+            changed_lines.append((new_line_num, line[1:]))
+        elif line.startswith('-') and not line.startswith('---'):
+            # deletions from old file - can be handled if needed
+            continue
+        else:
+            new_line_num += 1  # context line
+    
+    return changed_lines
+
+
+def generate_diff_with_line_numbers(old_text, new_text):
+    """
+    Returns ONLY lines with meaningful changes (ignoring whitespace/formatting)
+    Format: [(line_number, changed_line_content)]
+    """
+    old_lines = old_text.splitlines()
+    new_lines = new_text.splitlines()
+    
+    differ = difflib.SequenceMatcher(
+        None, 
+        old_lines, 
+        new_lines,
+        autojunk=False  
+    )
+    
+    changes = []
+    current_line = 0
+    
+    for tag, i1, i2, j1, j2 in differ.get_opcodes():
+        if tag == 'equal':
+            current_line += (j2 - j1)
+            continue
+            
+        if tag == 'insert' or tag == 'replace':
+            for j in range(j1, j2):
+                current_line += 1
+                
+                # Only consider meaningful changes (ignore pure whitespace)
+                new_line = new_lines[j]
+                if not new_line.strip():
+                    continue
+                    
+                # Compare with nearby original lines for real changes
+                is_real_change = True
+                if tag == 'replace':
+                    old_comparison = old_lines[i1:i2]
+                    if new_line.strip() in (ol.strip() for ol in old_comparison):
+                        is_real_change = False
+                
+                if is_real_change:
+                    changes.append((current_line, new_line))
+    
+    return changes
+
+def load_coding_standards():
+    if CODING_STANDARDS_PATH and os.path.exists(CODING_STANDARDS_PATH):
+        with open(CODING_STANDARDS_PATH, "r", encoding="utf-8") as f:
+            return f.read()
+    return ""
+
+def call_groq(prompt):
+    try:
+        payload = {
+            "model": MODEL,
+            "messages": [
+                {"role": "system", "content": "You are an experienced code reviewer."},
+                {"role": "user", "content": prompt}
+            ]
+        }
+        headers = {
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        response = requests.post(GROQ_URL, json=payload, headers=headers, timeout=60)
+        response.raise_for_status()
+        return response.json()["choices"][0]["message"]["content"]
+    except Exception as e:
+        logging.error(f"Groq call failed: {e}")
+        return "AI review failed. Please review manually."
+    
+
+def post_pr_comment(pr_id: int, message: str):
+    """
+    Post a comment to a pull request in Azure DevOps.
+    """
+    try:
+        org = AZURE_ORG
+        project = PROJECT
+        repo_id = REPO_ID
+        token = AZURE_TOKEN
+
+        url = f"https://dev.azure.com/{org}/{project}/_apis/git/repositories/{repo_id}/pullRequests/{pr_id}/threads?api-version=7.1-preview.1"
+
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Basic {base64.b64encode(f':{token}'.encode()).decode()}"
+        }
+
+        payload = {
+            "comments": [
+                {
+                    "parentCommentId": 0,
+                    "content": message,
+                    "commentType": 1  # Regular comment
+                }
+            ],
+            "status": "active"
+        }
+
+        response = requests.post(url, headers=headers, json=payload)
+        if response.status_code == 200 or response.status_code == 201:
+            logging.info("PR comment posted successfully.")
+        else:
+            logging.error(f"Failed to post comment. Status: {response.status_code}, Response: {response.text}")
+
+    except Exception as e:
+        logging.error(f"Exception occurred while posting PR comment: {e}")
+
+def post_inline_comment(file_path, line_number, comment):
+    if dry_run:
+        logging.info(f"Dry run: would post inline comment on {file_path}:{line_number} - {comment}")
+        return
+    payload = {
+        "comments": [{
+            "parentCommentId": 0,
+            "content": comment,
+            "commentType": 1
+        }],
+        "threadContext": {
+            "filePath": file_path,
+            "rightFileStart": {"line": line_number, "offset": 1},
+            "rightFileEnd": {"line": line_number, "offset": 1}
+        },
+        "status": "active"
+    }
+    url = f"https://dev.azure.com/{AZURE_ORG}/{PROJECT}/_apis/git/repositories/{REPO_ID}/pullRequests/{PR_ID}/threads?api-version=7.1-preview.1"
+    resp = requests.post(url, headers=api_headers(), json=payload)
+    if resp.ok:
+        logging.info(f"Inline comment posted on {file_path}:{line_number}")
+    else:
+        logging.error(f"Failed to post inline comment: {resp.status_code} {resp.text}")
+
+def main():
+    logging.info("Starting PR review script...")
+
+    required_vars = [AZURE_ORG, PROJECT, REPO_ID, PR_ID, AZURE_TOKEN, GROQ_API_KEY]
+    if not all(required_vars):
+        logging.error("Missing required environment variables.")
+        return
+
+    iteration_id = get_latest_iteration_id()
+    print(f"Using latest iteration ID: {iteration_id}")
+    changes = get_pr_changes(iteration_id)
+    coding_standards = load_coding_standards()
+    print(f"Found {len(changes)} changes in PR #{PR_ID} (Iteration ID: {iteration_id})")
+
+    file_summaries = []
+
+    for change in changes:
+        path = change["item"]["path"]
+        print(f"🔍 Processing change in file: {path}")
+        old_blob_id = change["item"].get("originalObjectId")
+        new_blob_id = change["item"].get("objectId")
+        
+        if not new_blob_id:
+            continue
+
+        old_content = get_blob_content(REPO_ID, old_blob_id) if old_blob_id else ""
+        new_content = get_blob_content(REPO_ID, new_blob_id)
+        if not new_content:
+            continue
+
+        diff_content = generate_file_diff(old_content, new_content)
+        if not diff_content.strip():
+            print("No meaningful differences found for file.")
+            continue
+
+        prompt = create_analysis_prompt(diff_content)
+        file_review = call_groq(prompt)
+
+        file_summaries.append(f"## 🔹 File: `{path}`\n{file_review.strip()}\n")
+
+    if not file_summaries:
+        print("No meaningful changes detected across all files.")
+        return
+
+    combined_summary = "\n".join(file_summaries)
+
+    summary_prompt = f"""You are an experienced code reviewer. Below are summaries of file-level changes in a pull request. Based on this and the coding standards below, generate a **concise, high-level PR summary**.
+
+### Coding Standards
+{coding_standards}
+
+### File-Level Summaries
+{combined_summary}
+
+Write a professional, high-level summary of the entire PR in 5 bullets or fewer. Do not repeat file names.
+"""
+    pr_review_summary = call_groq(summary_prompt)
+
+    # Final combined output
+    final_output = f"""# Pull Request Review Summary
+
+{combined_summary}
+
+---
+
+## 🔧 Overall Summary
+{pr_review_summary}
+"""
+
+    print(final_output)
+    logging.info(final_output)
+
+    post_pr_comment(PR_ID, final_output)
+
+
+if __name__ == "__main__":
+    main()
