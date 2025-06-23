@@ -2,7 +2,7 @@
 
 ## Overview
 
-**Azure DevOps AI PR Reviewer** is an automated code review tool designed to enhance your pull request (PR) process. It analyzes code changes in every PR, summarizes the key modifications, and provides actionable, AI-powered review comments. This tool integrates seamlessly with Azure DevOps pipelines and leverages Groq LLMs for fast, high-quality code analysis. You can easily adapt it to use other AI providers or local models if needed.
+**Azure DevOps AI PR Reviewer** is an automated code review tool designed to enhance pull request (PR) process. It analyzes code changes in every PR, summarizes the key modifications, and provides actionable, AI-powered review comments. This tool integrates seamlessly with Azure DevOps pipelines and leverages Groq LLMs for fast, high-quality code analysis. You can easily adapt it to use other AI providers or local models if needed.
 
 ---
 
@@ -37,7 +37,7 @@
 
 ### 2. Environment Setup
 
-Create a `.env` file in your project root with the following variables:
+Create a `.env` file in project root with the following variables:
 
 ```
 AZURE_ORG=your_azure_org
@@ -67,7 +67,7 @@ Add a step to your Azure DevOps pipeline YAML:
 
 ### 4. Customization
 
-- **Switch AI Provider:** Change the API endpoint and model in your `.env` or code to use another LLM or local model.
+- **Switch AI Provider:** Change the API endpoint and model in  `.env` or code to use another LLM or local model.
 - **Coding Standards:** Edit `docs/coding-standards.md` to enforce your team's best practices.
 
 ---
@@ -82,8 +82,6 @@ Below is a sample screenshot of the PR review summary posted by the bot:
 
 ## License
 
-This project is for internal and demonstration purposes.
-
 ---
 
-**Author:** [Your Name]
+**Author:** Aneesha
