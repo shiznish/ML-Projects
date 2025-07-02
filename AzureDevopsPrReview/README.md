@@ -79,8 +79,8 @@ You can integrate this into your Azure DevOps pipeline for automatic reviews on 
 ## Screenshots
 
 
-![PR Summary Example](screenshots/pr_review_output.png)
-![Inline Comments Example](screenshots/inline_comments.png)
+![PR Summary Example](Screenshots/pr_review_output.png)
+![Inline Comments Example](Screenshots/inline_comments.png)
 
 ---
 
