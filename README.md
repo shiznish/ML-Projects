@@ -6,36 +6,38 @@ Welcome to my **Machine Learning Projects Repository**, a curated collection of 
 
 ## 📂 Project List
 
-### 1. **End_To_End_ML_Project**
-A complete ML pipeline for wine quality prediction, including data ingestion, validation, transformation, model training, evaluation, and a Flask web app for predictions.
-
-### 2. **Agentic-Chatbot-FastAPI**
+### 1. **Agentic-Chatbot-FastAPI**
 A production-ready, agentic AI chatbot using FastAPI and LangGraph, supporting multiple LLM providers and a Streamlit frontend for interactive conversations.
 
-### 3. **Gen AI_Cold Email**
-A generative AI project for automating cold email creation, featuring vector search and prompt engineering.
+### 2. **AzureDevopsPrReview**
+An AI-powered PR reviewer for Azure DevOps. Automatically analyzes pull requests, summarizes code changes, and posts actionable review comments using LLMs. Integrates with Azure DevOps pipelines for seamless code review automation.
 
-### 4. **Local AI Agent(RAG)**
-A retrieval-augmented generation (RAG) agent that answers domain-specific questions (e.g., about a pizza restaurant) using local vector stores and LLMs.
-
-### 5. **Brazils_COVID19_Prediction**
+### 3. **Brazils_COVID19_Prediction**
 A machine learning project to predict ICU admission needs for COVID-19 patients in Brazil using clinical and demographic data.
 
-### 6. **COVID19_Forecast**
+### 4. **COVID19_Forecast**
 A project for forecasting COVID-19 trends using various time series and ML techniques.
 
-### 7. **Customer_Churn**
+### 5. **Customer_Churn**
 A machine learning solution for predicting customer churn, including feature engineering, model selection, and explainability.
 
-### 8. **Explainable_Intrusion_Detection**
+### 6. **End_To_End_ML_Project**
+A complete ML pipeline for wine quality prediction, including data ingestion, validation, transformation, model training, evaluation, and a Flask web app for predictions.
+
+### 7. **Explainable_Intrusion_Detection**
 An explainable AI project for network intrusion detection, combining ML models with interpretability techniques.
 
-### 9. **Sentiment_Analysis_Malayalam**
+### 8. **Gen AI_Cold Email**
+A generative AI project for automating cold email creation, featuring vector search and prompt engineering.
+
+### 9. **Local AI Agent(RAG)**
+A retrieval-augmented generation (RAG) agent that answers domain-specific questions (e.g., about a pizza restaurant) using local vector stores and LLMs.
+
+### 10. **Sentiment_Analysis_Malayalam**
 A sentiment analysis project for Malayalam language texts, leveraging NLP and deep learning.
 
-### 10. **TimeSeries_Analysis**
+### 11. **TimeSeries_Analysis**
 A collection of time series analysis and forecasting projects, demonstrating classical and modern approaches.
-
 
 ---
 
